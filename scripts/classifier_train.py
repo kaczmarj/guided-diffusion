@@ -11,6 +11,11 @@ import torch.distributed as dist
 import torch.nn.functional as F
 from torch.nn.parallel.distributed import DistributedDataParallel as DDP
 from torch.optim import AdamW
+try:
+    import wandb
+    has_wandb = True
+except ImportError:
+    has_wandb = False
 
 from guided_diffusion import dist_util, logger
 from guided_diffusion.fp16_util import MixedPrecisionTrainer
@@ -27,6 +32,9 @@ from guided_diffusion.train_util import parse_resume_step_from_filename, log_los
 
 def main():
     args = create_argparser().parse_args()
+
+    if has_wandb:
+        wandb.init(project="guided-diffusion", config=args)
 
     dist_util.setup_dist()
     logger.configure()
@@ -152,6 +160,8 @@ def main():
                     forward_backward_log(val_data, prefix="val")
                     model.train()
         if not step % args.log_interval:
+            if has_wandb:
+                wandb.log(logger.getkvs())
             logger.dumpkvs()
         if (
             step
