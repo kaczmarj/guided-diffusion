@@ -4,6 +4,12 @@ Train a diffusion model on images.
 
 import argparse
 
+try:
+    import wandb
+    has_wandb = True
+except ImportError:
+    has_wandb = False
+
 from guided_diffusion import dist_util, logger
 from guided_diffusion.image_datasets import load_data
 from guided_diffusion.resample import create_named_schedule_sampler
@@ -18,6 +24,9 @@ from guided_diffusion.train_util import TrainLoop
 
 def main():
     args = create_argparser().parse_args()
+
+    if has_wandb:
+        wandb.init(project="guided-diffusion", config=args)
 
     dist_util.setup_dist()
     logger.configure()
@@ -54,6 +63,7 @@ def main():
         schedule_sampler=schedule_sampler,
         weight_decay=args.weight_decay,
         lr_anneal_steps=args.lr_anneal_steps,
+        wandb_module=wandb if has_wandb else None,
     ).run_loop()
 
 
